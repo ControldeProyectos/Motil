@@ -4,7 +4,7 @@ export interface Suministro {
   proveedor: string;
   fechaNecesaria: string;
   fechaLlegada: string;
-  leadTime: string;
+  leadTime?: string;
   estado: 'En proceso' | 'En tránsito' | 'En aduana' | 'Entregado' | 'Pendiente OC';
   obs: string;
 }

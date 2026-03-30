@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { TabId } from './types';
-import { useAppState } from './hooks/useAppState';
+import { useAppStore } from './store/appStore';
 import { Header } from './components/Header';
 import { NavTabs } from './components/NavTabs';
 import { ResumenEjecutivo } from './components/sections/ResumenEjecutivo';
@@ -9,23 +9,36 @@ import { CurvaS } from './components/sections/CurvaS';
 import { Suministros } from './components/sections/Suministros';
 import { Restricciones } from './components/sections/Restricciones';
 import { Configuracion } from './components/sections/Configuracion';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabId>('resumen');
-  const {
-    state,
-    alerts,
-    addSuministro,
-    deleteSuministro,
-    addRestriccion,
-    deleteRestriccion,
-    updateRestriccionEstado,
-    setDiasAlerta,
-    exportJSON,
-    importJSON,
-  } = useAppState();
 
-  const today = new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
+  // Cada componente que necesite datos los leerá directamente del store.
+  // App solo necesita los datos transversales: alertas y restricciones para el header/nav.
+  const alerts       = useAppStore(s => s.getAlertas());
+  const restricciones = useAppStore(s => s.restricciones);
+  const suministros   = useAppStore(s => s.suministros);
+  const diasAlerta    = useAppStore(s => s.diasAlerta);
+
+  const addSuministro          = useAppStore(s => s.addSuministro);
+  const deleteSuministro       = useAppStore(s => s.deleteSuministro);
+  const addRestriccion         = useAppStore(s => s.addRestriccion);
+  const deleteRestriccion      = useAppStore(s => s.deleteRestriccion);
+  const updateRestriccionEstado = useAppStore(s => s.updateRestriccionEstado);
+  const setDiasAlerta          = useAppStore(s => s.setDiasAlerta);
+  const exportJSON             = useAppStore(s => s.exportJSON);
+  const importJSON             = useAppStore(s => s.importJSON);
+
+  const today = new Date().toLocaleDateString('es-PE', {
+    day: '2-digit', month: 'long', year: 'numeric',
+  });
+
+  const handleImport = (file: File) => {
+    importJSON(file)
+      .then(() => alert('Datos importados correctamente.'))
+      .catch((err: Error) => alert(err.message));
+  };
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -34,17 +47,27 @@ export default function App() {
 
       <main style={{ padding: '22px 28px', maxWidth: 1600, flex: 1 }}>
         {activeTab === 'resumen' && (
-          <ResumenEjecutivo
-            alerts={alerts}
-            restricciones={state.restricciones}
-            onGoToSuministros={() => setActiveTab('suministros')}
-          />
+          <ErrorBoundary section="Resumen Ejecutivo">
+            <ResumenEjecutivo
+              alerts={alerts}
+              restricciones={restricciones}
+              onGoToSuministros={() => setActiveTab('suministros')}
+            />
+          </ErrorBoundary>
         )}
-        {activeTab === 'avance' && <AvanceObra />}
-        {activeTab === 'curvas' && <CurvaS />}
+        {activeTab === 'avance' && (
+          <ErrorBoundary section="Avance de Obra">
+            <AvanceObra />
+          </ErrorBoundary>
+        )}
+        {activeTab === 'curvas' && (
+          <ErrorBoundary section="Curva S">
+            <CurvaS />
+          </ErrorBoundary>
+        )}
         {activeTab === 'suministros' && (
           <Suministros
-            suministros={state.suministros}
+            suministros={suministros}
             alerts={alerts}
             onAdd={addSuministro}
             onDelete={deleteSuministro}
@@ -52,7 +75,7 @@ export default function App() {
         )}
         {activeTab === 'restricciones' && (
           <Restricciones
-            restricciones={state.restricciones}
+            restricciones={restricciones}
             onAdd={addRestriccion}
             onDelete={deleteRestriccion}
             onUpdateEstado={updateRestriccionEstado}
@@ -60,10 +83,10 @@ export default function App() {
         )}
         {activeTab === 'configuracion' && (
           <Configuracion
-            diasAlerta={state.diasAlerta}
+            diasAlerta={diasAlerta}
             onSetDiasAlerta={setDiasAlerta}
             onExport={exportJSON}
-            onImport={importJSON}
+            onImport={handleImport}
           />
         )}
       </main>

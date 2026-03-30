@@ -50,15 +50,20 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
 interface FieldProps {
   label: string;
   children: React.ReactNode;
-  half?: boolean;
+  error?: string;
 }
-export function Field({ label, children }: FieldProps) {
+export function Field({ label, children, error }: FieldProps) {
   return (
     <div style={{ marginBottom: 12 }}>
-      <label style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.8px', color: '#4a6080', marginBottom: 4, display: 'block' }}>
+      <label style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.8px', color: error ? '#c0392b' : '#4a6080', marginBottom: 4, display: 'block' }}>
         {label}
       </label>
       {children}
+      {error && (
+        <div style={{ fontSize: 10, color: '#c0392b', marginTop: 4, fontWeight: 500 }}>
+          {error}
+        </div>
+      )}
     </div>
   );
 }
