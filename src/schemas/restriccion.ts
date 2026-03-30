@@ -11,16 +11,16 @@ export const restriccionSchema = z.object({
     .min(2, 'Indica el responsable de levantar la restricción')
     .max(100, 'Máximo 100 caracteres'),
 
-  fecha: z
+  fechaAtencion: z
     .string()
     .min(1, 'La fecha de atención es obligatoria')
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato inválido (YYYY-MM-DD)'),
 
-  tipo: z.enum(['critica', 'no-critica'], {
-    error: 'El tipo debe ser "critica" o "no-critica"',
+  tipo: z.enum(['CRITICA', 'NO_CRITICA'], {
+    error: 'El tipo debe ser "CRITICA" o "NO_CRITICA"',
   }),
 
-  estado: z.enum(['abierta', 'en-proceso', 'cerrada'], {
+  estado: z.enum(['ABIERTA', 'EN_PROCESO', 'CERRADA'], {
     error: 'Estado inválido',
   }),
 

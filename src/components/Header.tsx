@@ -3,7 +3,11 @@ import { useCountdown } from '../hooks/useCountdown';
 
 const FIN_CONTRACTUAL = '2027-01-07';
 
-export function Header() {
+interface HeaderProps {
+  onLogout?: () => void;
+}
+
+export function Header({ onLogout }: HeaderProps) {
   const diasRestantes = useCountdown(FIN_CONTRACTUAL);
 
   const daysColor =
@@ -73,6 +77,14 @@ export function Header() {
           <span className="animate-pulse-dot" style={{ width: 7, height: 7, borderRadius: '50%', background: '#4ccd7f', display: 'inline-block' }} />
           LIVE
         </div>
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 7, padding: '6px 12px', color: 'rgba(255,255,255,.8)', fontSize: 10, cursor: 'pointer', fontFamily: 'Inter', fontWeight: 600, letterSpacing: '.5px' }}
+          >
+            Salir
+          </button>
+        )}
       </div>
     </header>
   );

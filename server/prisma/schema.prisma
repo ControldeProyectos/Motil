@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  ADMIN
+  RESIDENTE
+  SUPERVISOR
+  VIEWER
+}
+
+model Usuario {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  nombre       String
+  rol          Rol      @default(VIEWER)
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  suministros   Suministro[]
+  restricciones Restriccion[]
+  @@map("usuarios")
+}
+
+model Proyecto {
+  id            String   @id @default(uuid())
+  nombre        String
+  descripcion   String?
+  valorContrato Decimal  @map("valor_contrato") @db.Decimal(14, 2)
+  fechaInicio   DateTime @map("fecha_inicio") @db.Date
+  fechaFin      DateTime @map("fecha_fin") @db.Date
+  semanaActual  Int      @default(1) @map("semana_actual")
+  activo        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  suministros   Suministro[]
+  restricciones Restriccion[]
+  actividades   Actividad[]
+  curvaS        CurvaS[]
+  @@map("proyectos")
+}
+
+enum EstadoSuministro {
+  EN_PROCESO
+  EN_TRANSITO
+  EN_ADUANA
+  ENTREGADO
+  PENDIENTE_OC
+}
+
+model Suministro {
+  id             String           @id @default(uuid())
+  proyectoId     String           @map("proyecto_id")
+  descripcion    String
+  proveedor      String
+  fechaNecesaria DateTime         @map("fecha_necesaria") @db.Date
+  fechaLlegada   DateTime         @map("fecha_llegada") @db.Date
+  leadTimeDias   Int?             @map("lead_time_dias")
+  estado         EstadoSuministro @default(EN_PROCESO)
+  obs            String?
+  creadoPorId    String?          @map("creado_por_id")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  proyecto  Proyecto @relation(fields: [proyectoId],  references: [id], onDelete: Cascade)
+  creadoPor Usuario? @relation(fields: [creadoPorId], references: [id])
+  @@map("suministros")
+}
+
+enum TipoRestriccion {
+  CRITICA
+  NO_CRITICA
+}
+
+enum EstadoRestriccion {
+  ABIERTA
+  EN_PROCESO
+  CERRADA
+}
+
+model Restriccion {
+  id            String            @id @default(uuid())
+  proyectoId    String            @map("proyecto_id")
+  descripcion   String
+  responsable   String
+  fechaAtencion DateTime          @map("fecha_atencion") @db.Date
+  tipo          TipoRestriccion   @default(CRITICA)
+  estado        EstadoRestriccion @default(ABIERTA)
+  obs           String?
+  creadoPorId   String?           @map("creado_por_id")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+  proyecto  Proyecto @relation(fields: [proyectoId],  references: [id], onDelete: Cascade)
+  creadoPor Usuario? @relation(fields: [creadoPorId], references: [id])
+  @@map("restricciones")
+}
+
+model Actividad {
+  id          String   @id @default(uuid())
+  proyectoId  String   @map("proyecto_id")
+  frente      String
+  nombre      String
+  contractual Decimal  @db.Decimal(6, 2)
+  planificado Decimal  @db.Decimal(6, 2)
+  real        Decimal  @db.Decimal(6, 2)
+  valorUSD    Decimal  @map("valor_usd") @db.Decimal(14, 2)
+  orden       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  proyecto Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  @@map("actividades")
+}
+
+model CurvaS {
+  id          String   @id @default(uuid())
+  proyectoId  String   @map("proyecto_id")
+  semana      String
+  fecha       DateTime @db.Date
+  planificado Decimal  @db.Decimal(6, 3)
+  real        Decimal? @db.Decimal(6, 3)
+  createdAt   DateTime @default(now()) @map("created_at")
+  proyecto Proyecto @relation(fields: [proyectoId], references: [id], onDelete: Cascade)
+  @@unique([proyectoId, semana])
+  @@map("curva_s")
+}

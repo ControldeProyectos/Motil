@@ -19,7 +19,7 @@ interface Props {
 }
 
 export function ResumenEjecutivo({ alerts, restricciones, onGoToSuministros }: Props) {
-  const restricAbiertas = restricciones.filter(r => r.estado !== 'cerrada').length;
+  const restricAbiertas = restricciones.filter(r => r.estado !== 'CERRADA').length;
   const miniData = CURVA_S.slice(0, 17);
 
   return (

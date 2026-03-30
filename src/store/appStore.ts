@@ -1,10 +1,9 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Suministro, Restriccion } from '../types';
+import type { Suministro, Restriccion, EstadoRestriccion } from '../types';
 import type { SuministroInput } from '../schemas/suministro';
 import type { RestriccionInput } from '../schemas/restriccion';
 import { getAlertas } from '../utils/alerts';
-import { RESTRICCIONES_DEMO } from '../data/restriccionesDemo';
 
 // ── Tipos del store ──────────────────────────────────────────────────────────
 
@@ -25,20 +24,19 @@ interface AppStore {
 
   // Acciones — Suministros
   addSuministro:    (input: SuministroInput)   => void;
-  deleteSuministro: (id: string)                => void;
+  deleteSuministro: (id: string)               => void;
 
   // Acciones — Restricciones
-  addRestriccion:          (input: RestriccionInput)              => void;
-  deleteRestriccion:       (id: string)                           => void;
-  updateRestriccionEstado: (id: string, estado: Restriccion['estado']) => void;
+  addRestriccion:          (input: RestriccionInput)      => void;
+  deleteRestriccion:       (id: string)                   => void;
+  updateRestriccionEstado: (id: string, estado: EstadoRestriccion) => void;
 
   // Acciones — Config
   setDiasAlerta: (n: number) => void;
-
-  // Import / Export
-  exportJSON: () => void;
-  importJSON: (file: File) => Promise<void>;
 }
+
+const LOCAL_PROJECT = 'local';
+const NOW = () => new Date().toISOString();
 
 // ── Store ────────────────────────────────────────────────────────────────────
 
@@ -47,7 +45,7 @@ export const useAppStore = create<AppStore>()(
     (set, get) => ({
       // Estado inicial
       suministros:   [],
-      restricciones: RESTRICCIONES_DEMO.map(r => ({ ...r })),
+      restricciones: [],
       diasAlerta:    15,
 
       // ── Selectores ────────────────────────────────────────────────────────
@@ -57,9 +55,9 @@ export const useAppStore = create<AppStore>()(
       getStatsRestricciones: () => {
         const r = get().restricciones;
         return {
-          criticasAbiertas:   r.filter(x => x.tipo === 'critica'  && x.estado !== 'cerrada').length,
-          noCriticasAbiertas: r.filter(x => x.tipo !== 'critica'  && x.estado !== 'cerrada').length,
-          cerradas:           r.filter(x => x.estado === 'cerrada').length,
+          criticasAbiertas:   r.filter(x => x.tipo === 'CRITICA'  && x.estado !== 'CERRADA').length,
+          noCriticasAbiertas: r.filter(x => x.tipo !== 'CRITICA'  && x.estado !== 'CERRADA').length,
+          cerradas:           r.filter(x => x.estado === 'CERRADA').length,
           total:              r.length,
         };
       },
@@ -70,7 +68,13 @@ export const useAppStore = create<AppStore>()(
         set(state => ({
           suministros: [
             ...state.suministros,
-            { ...input, id: crypto.randomUUID(), obs: input.obs ?? '' },
+            {
+              ...input,
+              id:         crypto.randomUUID(),
+              proyectoId: LOCAL_PROJECT,
+              obs:        input.obs ?? '',
+              createdAt:  NOW(),
+            },
           ],
         })),
 
@@ -85,7 +89,13 @@ export const useAppStore = create<AppStore>()(
         set(state => ({
           restricciones: [
             ...state.restricciones,
-            { ...input, id: crypto.randomUUID(), obs: input.obs ?? '' },
+            {
+              ...input,
+              id:         crypto.randomUUID(),
+              proyectoId: LOCAL_PROJECT,
+              obs:        input.obs ?? '',
+              createdAt:  NOW(),
+            },
           ],
         })),
 
@@ -104,46 +114,10 @@ export const useAppStore = create<AppStore>()(
       // ── Config ────────────────────────────────────────────────────────────
 
       setDiasAlerta: (n) => set({ diasAlerta: n }),
-
-      // ── Import / Export ───────────────────────────────────────────────────
-
-      exportJSON: () => {
-        const { suministros, restricciones, diasAlerta } = get();
-        const payload = JSON.stringify({ suministros, restricciones, diasAlerta }, null, 2);
-        const blob = new Blob([payload], { type: 'application/json' });
-        const url  = URL.createObjectURL(blob);
-        const a    = Object.assign(document.createElement('a'), {
-          href:     url,
-          download: 'motil_estado.json',
-        });
-        a.click();
-        URL.revokeObjectURL(url);
-      },
-
-      importJSON: (file) =>
-        new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            try {
-              const parsed = JSON.parse(e.target?.result as string) as Partial<AppStore>;
-              set({
-                suministros:   Array.isArray(parsed.suministros)   ? parsed.suministros   : get().suministros,
-                restricciones: Array.isArray(parsed.restricciones) ? parsed.restricciones : get().restricciones,
-                diasAlerta:    typeof parsed.diasAlerta === 'number' ? parsed.diasAlerta  : get().diasAlerta,
-              });
-              resolve();
-            } catch {
-              reject(new Error('Archivo JSON inválido'));
-            }
-          };
-          reader.onerror = () => reject(new Error('Error al leer el archivo'));
-          reader.readAsText(file);
-        }),
     }),
     {
-      name:    'motil_exec',          // clave en localStorage
+      name:    'motil_exec',
       storage: createJSONStorage(() => localStorage),
-      // Solo persiste estos campos, no las funciones
       partialize: (state) => ({
         suministros:   state.suministros,
         restricciones: state.restricciones,

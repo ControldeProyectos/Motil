@@ -6,8 +6,8 @@ const valid = {
   proveedor:      'Siemens',
   fechaNecesaria: '2026-06-01',
   fechaLlegada:   '2026-05-20',
-  leadTime:       '90',
-  estado:         'En proceso' as const,
+  leadTimeDias:   90,
+  estado:         'EN_PROCESO' as const,
   obs:            '',
 };
 

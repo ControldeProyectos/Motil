@@ -6,14 +6,16 @@ import type { Suministro } from '../../types';
 const HOY = '2026-03-30T12:00:00';
 
 const base: Suministro = {
-  id: '1',
-  descripcion: 'Transformador 138/33kV',
-  proveedor: 'Siemens',
+  id:            '1',
+  proyectoId:    'test',
+  descripcion:   'Transformador 138/33kV',
+  proveedor:     'Siemens',
   fechaNecesaria: '2026-04-20',   // necesario en 21 días
   fechaLlegada:   '2026-04-15',   // llega 5 días antes → OK
-  leadTime: '90',
-  estado: 'En proceso',
-  obs: '',
+  leadTimeDias:  90,
+  estado:        'EN_PROCESO',
+  obs:           '',
+  createdAt:     '2026-01-01T00:00:00.000Z',
 };
 
 describe('isAlerta', () => {
@@ -34,8 +36,8 @@ describe('isAlerta', () => {
     expect(isAlerta(urgente, 15)).toBe(true);
   });
 
-  it('NO genera alerta si el estado es Entregado, sin importar las fechas', () => {
-    const entregado: Suministro = { ...base, estado: 'Entregado', fechaLlegada: '2026-05-01' };
+  it('NO genera alerta si el estado es ENTREGADO, sin importar las fechas', () => {
+    const entregado: Suministro = { ...base, estado: 'ENTREGADO', fechaLlegada: '2026-05-01' };
     expect(isAlerta(entregado, 15)).toBe(false);
   });
 

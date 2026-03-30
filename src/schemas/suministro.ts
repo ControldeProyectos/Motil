@@ -21,10 +21,10 @@ export const suministroSchema = z.object({
     .min(1, 'La fecha estimada de llegada es obligatoria')
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato inválido (YYYY-MM-DD)'),
 
-  leadTime: z.string().optional(),
+  leadTimeDias: z.coerce.number().int().positive().optional(),
 
   estado: z.enum(
-    ['En proceso', 'En tránsito', 'En aduana', 'Entregado', 'Pendiente OC'],
+    ['EN_PROCESO', 'EN_TRANSITO', 'EN_ADUANA', 'ENTREGADO', 'PENDIENTE_OC'],
     { error: 'Estado inválido' },
   ),
 

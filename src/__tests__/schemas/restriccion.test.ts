@@ -2,12 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { restriccionSchema } from '../../schemas/restriccion';
 
 const valid = {
-  descripcion: 'Falta planos IFC para inicio de cimentaciones',
-  responsable: 'Ing. Diseño',
-  fecha:       '2026-04-01',
-  tipo:        'critica' as const,
-  estado:      'abierta' as const,
-  obs:         'Impacto directo en ruta crítica.',
+  descripcion:   'Falta planos IFC para inicio de cimentaciones',
+  responsable:   'Ing. Diseño',
+  fechaAtencion: '2026-04-01',
+  tipo:          'CRITICA' as const,
+  estado:        'ABIERTA' as const,
+  obs:           'Impacto directo en ruta crítica.',
 };
 
 describe('restriccionSchema', () => {
@@ -26,8 +26,8 @@ describe('restriccionSchema', () => {
     expect(r.success).toBe(false);
   });
 
-  it('rechaza fecha vacía', () => {
-    const r = restriccionSchema.safeParse({ ...valid, fecha: '' });
+  it('rechaza fechaAtencion vacía', () => {
+    const r = restriccionSchema.safeParse({ ...valid, fechaAtencion: '' });
     expect(r.success).toBe(false);
   });
 
@@ -41,13 +41,13 @@ describe('restriccionSchema', () => {
     expect(r.success).toBe(false);
   });
 
-  it('acepta tipo no-critica', () => {
-    const r = restriccionSchema.safeParse({ ...valid, tipo: 'no-critica' });
+  it('acepta tipo NO_CRITICA', () => {
+    const r = restriccionSchema.safeParse({ ...valid, tipo: 'NO_CRITICA' });
     expect(r.success).toBe(true);
   });
 
-  it('acepta estado en-proceso', () => {
-    const r = restriccionSchema.safeParse({ ...valid, estado: 'en-proceso' });
+  it('acepta estado EN_PROCESO', () => {
+    const r = restriccionSchema.safeParse({ ...valid, estado: 'EN_PROCESO' });
     expect(r.success).toBe(true);
   });
 });

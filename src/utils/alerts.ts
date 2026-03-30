@@ -5,13 +5,13 @@ import { daysBetween, daysFromToday } from './dates';
  * Determina si un suministro debe generar alerta.
  *
  * Condiciones:
- *  1. Su estado NO es 'Entregado'.
+ *  1. Su estado NO es 'ENTREGADO'.
  *  2. Tiene fechas válidas.
  *  3. La fecha estimada de llegada es posterior a la fecha necesaria en obra
  *     (llegaría tarde), O bien faltan `diasAlerta` días o menos para necesitarlo.
  */
 export function isAlerta(suministro: Suministro, diasAlerta: number): boolean {
-  if (suministro.estado === 'Entregado') return false;
+  if (suministro.estado === 'ENTREGADO') return false;
 
   const { fechaNecesaria, fechaLlegada } = suministro;
   if (!fechaNecesaria || !fechaLlegada) return false;

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Suministro } from '../../types';
+import { ESTADO_SUMINISTRO_LABEL } from '../../types';
 import type { SuministroInput } from '../../schemas/suministro';
 import { suministroSchema } from '../../schemas/suministro';
 import { formatDate, daysBetween } from '../../utils/dates';
@@ -7,30 +8,39 @@ import { alertaLabel } from '../../utils/alerts';
 import { Card, CardTitle } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Modal, Field, Input, Select, Textarea, Btn, ModalFooter } from '../ui/Modal';
+import {
+  useSuministros,
+  useCreateSuministro,
+  useDeleteSuministro,
+} from '../../hooks/useSuministros';
+import { getAlertas } from '../../utils/alerts';
 
 interface Props {
-  suministros: Suministro[];
-  alerts: Suministro[];
-  onAdd: (s: SuministroInput) => void;
-  onDelete: (id: string) => void;
+  proyectoId: string;
+  diasAlerta: number;
 }
 
 const emptyForm = (): SuministroInput => ({
   descripcion: '', proveedor: '', fechaNecesaria: '', fechaLlegada: '',
-  leadTime: '', estado: 'En proceso', obs: '',
+  estado: 'EN_PROCESO', obs: '',
 });
 
 const estBadge = (est: string): 'ok' | 'info' | 'warn' | 'neutral' =>
-  est === 'Entregado' ? 'ok' : est === 'En tránsito' ? 'info' : est === 'En aduana' ? 'warn' : 'neutral';
+  est === 'ENTREGADO' ? 'ok' : est === 'EN_TRANSITO' ? 'info' : est === 'EN_ADUANA' ? 'warn' : 'neutral';
 
-export function Suministros({ suministros, alerts, onAdd, onDelete }: Props) {
+export function Suministros({ proyectoId, diasAlerta }: Props) {
+  const { data: suministros = [], isLoading, error } = useSuministros(proyectoId);
+  const createMut = useCreateSuministro(proyectoId);
+  const deleteMut = useDeleteSuministro(proyectoId);
+
   const [open, setOpen]     = useState(false);
   const [form, setForm]     = useState(emptyForm());
   const [errors, setErrors] = useState<Partial<Record<keyof SuministroInput, string>>>({});
 
-  const setField = (k: keyof SuministroInput, v: string) => {
+  const alerts = getAlertas(suministros, diasAlerta);
+
+  const setField = (k: keyof SuministroInput, v: string | number) => {
     setForm(f => ({ ...f, [k]: v }));
-    // Limpia el error del campo al editar
     setErrors(e => ({ ...e, [k]: undefined }));
   };
 
@@ -43,7 +53,6 @@ export function Suministros({ suministros, alerts, onAdd, onDelete }: Props) {
   const handleAdd = () => {
     const result = suministroSchema.safeParse(form);
     if (!result.success) {
-      // Mapea errores de Zod a campos individuales
       const fieldErrors: Partial<Record<keyof SuministroInput, string>> = {};
       for (const issue of result.error.issues) {
         const key = issue.path[0] as keyof SuministroInput;
@@ -52,9 +61,11 @@ export function Suministros({ suministros, alerts, onAdd, onDelete }: Props) {
       setErrors(fieldErrors);
       return;
     }
-    onAdd(result.data);
-    handleClose();
+    createMut.mutate(result.data, { onSuccess: handleClose });
   };
+
+  if (isLoading) return <div style={{ padding: 40, textAlign: 'center', color: '#4a6080' }}>Cargando suministros…</div>;
+  if (error)    return <div style={{ padding: 40, textAlign: 'center', color: '#c0392b' }}>Error: {(error as Error).message}</div>;
 
   return (
     <div>
@@ -117,9 +128,9 @@ export function Suministros({ suministros, alerts, onAdd, onDelete }: Props) {
                     Sin suministros registrados. Agrega con "+ Nuevo Suministro".
                   </td>
                 </tr>
-              ) : suministros.map((s, i) => {
+              ) : (suministros as Suministro[]).map((s, i) => {
                 const isAlert = alerts.some(a => a.id === s.id);
-                const late = daysBetween(s.fechaNecesaria, s.fechaLlegada) > 0 && s.estado !== 'Entregado';
+                const late = daysBetween(s.fechaNecesaria, s.fechaLlegada) > 0 && s.estado !== 'ENTREGADO';
                 return (
                   <tr key={s.id} style={{ borderBottom: '1px solid #dde5ef', background: isAlert ? '#fdecea' : undefined }}>
                     <td style={{ padding: '9px 10px', color: '#7a92a8', fontWeight: 700 }}>{i + 1}</td>
@@ -129,13 +140,15 @@ export function Suministros({ suministros, alerts, onAdd, onDelete }: Props) {
                     <td style={{ padding: '9px 10px', fontFamily: 'DM Mono,monospace', color: late ? '#c0392b' : '#1a2b4a', fontWeight: late ? 700 : 400 }}>
                       {formatDate(s.fechaLlegada)}
                     </td>
-                    <td style={{ padding: '9px 10px' }}><Badge variant={estBadge(s.estado)}>{s.estado}</Badge></td>
+                    <td style={{ padding: '9px 10px' }}>
+                      <Badge variant={estBadge(s.estado)}>{ESTADO_SUMINISTRO_LABEL[s.estado]}</Badge>
+                    </td>
                     <td style={{ padding: '9px 10px' }}>
                       {isAlert ? <Badge variant="danger">⚠ ALERTA</Badge> : <Badge variant="ok">✓ OK</Badge>}
                     </td>
                     <td style={{ padding: '9px 10px' }}>
                       <button
-                        onClick={() => { if (confirm('¿Eliminar este suministro?')) onDelete(s.id); }}
+                        onClick={() => { if (confirm('¿Eliminar este suministro?')) deleteMut.mutate(s.id); }}
                         style={{ background: '#fdecea', color: '#c0392b', border: '1px solid #f5c6c2', fontSize: 10, padding: '3px 9px', borderRadius: 5, cursor: 'pointer', fontWeight: 600 }}
                       >
                         Eliminar
@@ -165,24 +178,26 @@ export function Suministros({ suministros, alerts, onAdd, onDelete }: Props) {
             <Input type="date" value={form.fechaLlegada} onChange={e => setField('fechaLlegada', e.target.value)} />
           </Field>
           <Field label="Lead Time (días)">
-            <Input type="number" value={form.leadTime} onChange={e => setField('leadTime', e.target.value)} placeholder="60" />
+            <Input type="number" value={form.leadTimeDias ?? ''} onChange={e => setField('leadTimeDias', e.target.value ? Number(e.target.value) : '')} placeholder="60" />
           </Field>
           <Field label="Estado Actual">
             <Select value={form.estado} onChange={e => setField('estado', e.target.value as SuministroInput['estado'])}>
-              <option>En proceso</option>
-              <option>En tránsito</option>
-              <option>En aduana</option>
-              <option>Entregado</option>
-              <option>Pendiente OC</option>
+              <option value="EN_PROCESO">En proceso</option>
+              <option value="EN_TRANSITO">En tránsito</option>
+              <option value="EN_ADUANA">En aduana</option>
+              <option value="ENTREGADO">Entregado</option>
+              <option value="PENDIENTE_OC">Pendiente OC</option>
             </Select>
           </Field>
         </div>
         <Field label="Observaciones">
-          <Textarea value={form.obs} onChange={e => setField('obs', e.target.value)} placeholder="Notas adicionales..." />
+          <Textarea value={form.obs ?? ''} onChange={e => setField('obs', e.target.value)} placeholder="Notas adicionales..." />
         </Field>
         <ModalFooter>
           <Btn variant="secondary" onClick={handleClose}>Cancelar</Btn>
-          <Btn variant="primary" onClick={handleAdd}>Guardar</Btn>
+          <Btn variant="primary" onClick={handleAdd} disabled={createMut.isPending}>
+            {createMut.isPending ? 'Guardando…' : 'Guardar'}
+          </Btn>
         </ModalFooter>
       </Modal>
     </div>

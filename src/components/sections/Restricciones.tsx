@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { Restriccion } from '../../types';
+import type { EstadoRestriccion } from '../../types';
+import { TIPO_RESTRICCION_LABEL } from '../../types';
 import type { RestriccionInput } from '../../schemas/restriccion';
 import { restriccionSchema } from '../../schemas/restriccion';
 import { formatDate } from '../../utils/dates';
@@ -7,19 +8,27 @@ import { sortRestricciones, statsRestricciones, estadoMeta } from '../../utils/r
 import { Badge } from '../ui/Badge';
 import { KpiCard } from '../ui/KpiCard';
 import { Modal, Field, Input, Select, Textarea, Btn, ModalFooter } from '../ui/Modal';
+import {
+  useRestricciones,
+  useCreateRestriccion,
+  useUpdateRestriccion,
+  useDeleteRestriccion,
+} from '../../hooks/useRestricciones';
 
 interface Props {
-  restricciones: Restriccion[];
-  onAdd: (r: RestriccionInput) => void;
-  onDelete: (id: string) => void;
-  onUpdateEstado: (id: string, estado: Restriccion['estado']) => void;
+  proyectoId: string;
 }
 
 const emptyForm = (): RestriccionInput => ({
-  descripcion: '', responsable: '', fecha: '', tipo: 'critica', estado: 'abierta', obs: '',
+  descripcion: '', responsable: '', fechaAtencion: '', tipo: 'CRITICA', estado: 'ABIERTA', obs: '',
 });
 
-export function Restricciones({ restricciones, onAdd, onDelete, onUpdateEstado }: Props) {
+export function Restricciones({ proyectoId }: Props) {
+  const { data: restricciones = [], isLoading, error } = useRestricciones(proyectoId);
+  const createMut = useCreateRestriccion(proyectoId);
+  const updateMut = useUpdateRestriccion(proyectoId);
+  const deleteMut = useDeleteRestriccion(proyectoId);
+
   const [open, setOpen]     = useState(false);
   const [form, setForm]     = useState(emptyForm());
   const [errors, setErrors] = useState<Partial<Record<keyof RestriccionInput, string>>>({});
@@ -46,9 +55,15 @@ export function Restricciones({ restricciones, onAdd, onDelete, onUpdateEstado }
       setErrors(fieldErrors);
       return;
     }
-    onAdd(result.data);
-    handleClose();
+    createMut.mutate(result.data, { onSuccess: handleClose });
   };
+
+  const handleUpdateEstado = (id: string, estado: EstadoRestriccion) => {
+    updateMut.mutate({ id, data: { estado } });
+  };
+
+  if (isLoading) return <div style={{ padding: 40, textAlign: 'center', color: '#4a6080' }}>Cargando restricciones…</div>;
+  if (error)    return <div style={{ padding: 40, textAlign: 'center', color: '#c0392b' }}>Error: {(error as Error).message}</div>;
 
   const stats  = statsRestricciones(restricciones);
   const sorted = sortRestricciones(restricciones);
@@ -71,7 +86,7 @@ export function Restricciones({ restricciones, onAdd, onDelete, onUpdateEstado }
         </button>
       </div>
 
-      {/* KPI row — usa stats derivadas del util */}
+      {/* KPI row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 14 }}>
         <KpiCard label="Críticas Abiertas"     value={stats.criticasAbiertas}   accentColor="#c0392b" valueColor="#c0392b" />
         <KpiCard label="No Críticas Abiertas"  value={stats.noCriticasAbiertas} accentColor="#b36a00" valueColor="#b36a00" />
@@ -79,29 +94,29 @@ export function Restricciones({ restricciones, onAdd, onDelete, onUpdateEstado }
         <KpiCard label="Total Registradas"     value={stats.total} />
       </div>
 
-      {/* Cards — usa sorted del util */}
+      {/* Cards */}
       {restricciones.length === 0 ? (
         <div style={{ color: '#4a6080', textAlign: 'center', padding: 40, background: '#f0f4f8', borderRadius: 8, fontSize: 12 }}>
           Sin restricciones registradas. Haz clic en "+ Nueva Restricción".
         </div>
       ) : sorted.map(r => {
         const origIdx     = restricciones.findIndex(x => x.id === r.id);
-        const borderColor = r.tipo === 'critica' ? '#c0392b' : r.estado === 'cerrada' ? '#1a7a4a' : '#b36a00';
+        const borderColor = r.tipo === 'CRITICA' ? '#c0392b' : r.estado === 'CERRADA' ? '#1a7a4a' : '#b36a00';
         const { label, variant } = estadoMeta(r.estado);
 
         return (
-          <div key={r.id} style={{ background: 'white', border: '1px solid #dde5ef', borderRadius: 8, padding: 13, marginBottom: 9, borderLeft: `4px solid ${borderColor}`, boxShadow: '0 1px 3px rgba(26,43,74,.05)', opacity: r.estado === 'cerrada' ? .8 : 1 }}>
+          <div key={r.id} style={{ background: 'white', border: '1px solid #dde5ef', borderRadius: 8, padding: 13, marginBottom: 9, borderLeft: `4px solid ${borderColor}`, boxShadow: '0 1px 3px rgba(26,43,74,.05)', opacity: r.estado === 'CERRADA' ? .8 : 1 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
               <div>
                 <div style={{ fontSize: 9, color: '#7a92a8', marginBottom: 2, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
-                  REST-{String(origIdx + 1).padStart(3, '0')} · {r.tipo === 'critica' ? '🔴 CRÍTICA' : '🟡 NO CRÍTICA'}
+                  REST-{String(origIdx + 1).padStart(3, '0')} · {TIPO_RESTRICCION_LABEL[r.tipo]}
                 </div>
                 <div style={{ fontSize: 12.5, fontWeight: 600, color: '#1a2b4a' }}>{r.descripcion}</div>
               </div>
               <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'flex-start' }}>
                 <Badge variant={variant}>{label}</Badge>
                 <button
-                  onClick={() => { if (confirm('¿Eliminar esta restricción?')) onDelete(r.id); }}
+                  onClick={() => { if (confirm('¿Eliminar esta restricción?')) deleteMut.mutate(r.id); }}
                   style={{ background: '#fdecea', color: '#c0392b', border: '1px solid #f5c6c2', fontSize: 10, padding: '3px 9px', borderRadius: 5, cursor: 'pointer', fontWeight: 600 }}
                 >
                   ✕
@@ -113,7 +128,7 @@ export function Restricciones({ restricciones, onAdd, onDelete, onUpdateEstado }
                 👤 Responsable: <span style={{ color: '#1a2b4a', fontWeight: 500 }}>{r.responsable || '—'}</span>
               </span>
               <span style={{ fontSize: 10.5, color: '#4a6080' }}>
-                📅 Fecha atención: <span style={{ color: '#1a2b4a', fontWeight: 500 }}>{r.fecha ? formatDate(r.fecha) : '—'}</span>
+                📅 Fecha atención: <span style={{ color: '#1a2b4a', fontWeight: 500 }}>{r.fechaAtencion ? formatDate(r.fechaAtencion) : '—'}</span>
               </span>
             </div>
             {r.obs && (
@@ -121,18 +136,18 @@ export function Restricciones({ restricciones, onAdd, onDelete, onUpdateEstado }
                 📝 {r.obs}
               </div>
             )}
-            {r.estado !== 'cerrada' && (
+            {r.estado !== 'CERRADA' && (
               <div style={{ display: 'flex', gap: 7, marginTop: 10 }}>
-                {r.estado !== 'en-proceso' && (
+                {r.estado !== 'EN_PROCESO' && (
                   <button
-                    onClick={() => onUpdateEstado(r.id, 'en-proceso')}
+                    onClick={() => handleUpdateEstado(r.id, 'EN_PROCESO')}
                     style={{ padding: '5px 12px', borderRadius: 7, border: '1.5px solid #dde5ef', background: '#f0f4f8', color: '#1a2b4a', fontFamily: 'Inter', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
                   >
                     Marcar en proceso
                   </button>
                 )}
                 <button
-                  onClick={() => onUpdateEstado(r.id, 'cerrada')}
+                  onClick={() => handleUpdateEstado(r.id, 'CERRADA')}
                   style={{ padding: '5px 12px', borderRadius: 7, border: 'none', background: '#2e6da4', color: 'white', fontFamily: 'Inter', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
                 >
                   ✓ Cerrar restricción
@@ -152,29 +167,31 @@ export function Restricciones({ restricciones, onAdd, onDelete, onUpdateEstado }
           <Field label="Responsable" error={errors.responsable}>
             <Input value={form.responsable} onChange={e => setField('responsable', e.target.value)} placeholder="Nombre o área" />
           </Field>
-          <Field label="Fecha de Atención" error={errors.fecha}>
-            <Input type="date" value={form.fecha} onChange={e => setField('fecha', e.target.value)} />
+          <Field label="Fecha de Atención" error={errors.fechaAtencion}>
+            <Input type="date" value={form.fechaAtencion} onChange={e => setField('fechaAtencion', e.target.value)} />
           </Field>
           <Field label="Tipo">
             <Select value={form.tipo} onChange={e => setField('tipo', e.target.value as RestriccionInput['tipo'])}>
-              <option value="critica">Crítica</option>
-              <option value="no-critica">No Crítica</option>
+              <option value="CRITICA">Crítica</option>
+              <option value="NO_CRITICA">No Crítica</option>
             </Select>
           </Field>
           <Field label="Estado">
             <Select value={form.estado} onChange={e => setField('estado', e.target.value as RestriccionInput['estado'])}>
-              <option value="abierta">Abierta</option>
-              <option value="en-proceso">En Proceso</option>
-              <option value="cerrada">Cerrada</option>
+              <option value="ABIERTA">Abierta</option>
+              <option value="EN_PROCESO">En Proceso</option>
+              <option value="CERRADA">Cerrada</option>
             </Select>
           </Field>
         </div>
         <Field label="Observaciones">
-          <Textarea value={form.obs} onChange={e => setField('obs', e.target.value)} placeholder="Impacto, acciones tomadas, notas..." />
+          <Textarea value={form.obs ?? ''} onChange={e => setField('obs', e.target.value)} placeholder="Impacto, acciones tomadas, notas..." />
         </Field>
         <ModalFooter>
           <Btn variant="secondary" onClick={handleClose}>Cancelar</Btn>
-          <Btn variant="primary" onClick={handleAdd}>Guardar</Btn>
+          <Btn variant="primary" onClick={handleAdd} disabled={createMut.isPending}>
+            {createMut.isPending ? 'Guardando…' : 'Guardar'}
+          </Btn>
         </ModalFooter>
       </Modal>
     </div>

@@ -16,18 +16,18 @@ const suministroBase = {
   proveedor:      'Siemens',
   fechaNecesaria: '2026-06-01',
   fechaLlegada:   '2026-05-20',
-  leadTime:       '90',
-  estado:         'En proceso' as const,
+  leadTimeDias:   90,
+  estado:         'EN_PROCESO' as const,
   obs:            '',
 };
 
 const restriccionBase = {
-  descripcion: 'Falta de planos IFC para cimentaciones',
-  responsable: 'Ing. Diseño',
-  fecha:       '2026-04-01',
-  tipo:        'critica' as const,
-  estado:      'abierta' as const,
-  obs:         '',
+  descripcion:   'Falta de planos IFC para cimentaciones',
+  responsable:   'Ing. Diseño',
+  fechaAtencion: '2026-04-01',
+  tipo:          'CRITICA' as const,
+  estado:        'ABIERTA' as const,
+  obs:           '',
 };
 
 describe('Suministros', () => {
@@ -58,14 +58,14 @@ describe('Restricciones', () => {
     useAppStore.getState().addRestriccion(restriccionBase);
     const { restricciones } = useAppStore.getState();
     expect(restricciones).toHaveLength(1);
-    expect(restricciones[0].tipo).toBe('critica');
+    expect(restricciones[0].tipo).toBe('CRITICA');
   });
 
   it('updateRestriccionEstado cambia el estado correctamente', () => {
     useAppStore.getState().addRestriccion(restriccionBase);
     const id = useAppStore.getState().restricciones[0].id;
-    useAppStore.getState().updateRestriccionEstado(id, 'cerrada');
-    expect(useAppStore.getState().restricciones[0].estado).toBe('cerrada');
+    useAppStore.getState().updateRestriccionEstado(id, 'CERRADA');
+    expect(useAppStore.getState().restricciones[0].estado).toBe('CERRADA');
   });
 
   it('deleteRestriccion elimina por id', () => {
@@ -85,9 +85,9 @@ describe('Configuración', () => {
 
 describe('getStatsRestricciones', () => {
   it('calcula correctamente las estadísticas', () => {
-    useAppStore.getState().addRestriccion({ ...restriccionBase, tipo: 'critica',    estado: 'abierta'    });
-    useAppStore.getState().addRestriccion({ ...restriccionBase, tipo: 'no-critica', estado: 'abierta'    });
-    useAppStore.getState().addRestriccion({ ...restriccionBase, tipo: 'critica',    estado: 'cerrada'    });
+    useAppStore.getState().addRestriccion({ ...restriccionBase, tipo: 'CRITICA',    estado: 'ABIERTA'    });
+    useAppStore.getState().addRestriccion({ ...restriccionBase, tipo: 'NO_CRITICA', estado: 'ABIERTA'    });
+    useAppStore.getState().addRestriccion({ ...restriccionBase, tipo: 'CRITICA',    estado: 'CERRADA'    });
 
     const stats = useAppStore.getState().getStatsRestricciones();
     expect(stats.criticasAbiertas).toBe(1);

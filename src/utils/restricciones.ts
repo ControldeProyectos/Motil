@@ -4,19 +4,19 @@ import type { Restriccion } from '../types';
 export function sortRestricciones(restricciones: Restriccion[]): Restriccion[] {
   return [...restricciones].sort((a, b) => {
     // Cerradas van al fondo
-    if (a.estado === 'cerrada' && b.estado !== 'cerrada') return 1;
-    if (a.estado !== 'cerrada' && b.estado === 'cerrada') return -1;
+    if (a.estado === 'CERRADA' && b.estado !== 'CERRADA') return 1;
+    if (a.estado !== 'CERRADA' && b.estado === 'CERRADA') return -1;
     // Críticas antes que no-críticas
-    return (a.tipo === 'critica' ? 0 : 1) - (b.tipo === 'critica' ? 0 : 1);
+    return (a.tipo === 'CRITICA' ? 0 : 1) - (b.tipo === 'CRITICA' ? 0 : 1);
   });
 }
 
 /** Estadísticas rápidas sobre las restricciones. */
 export function statsRestricciones(restricciones: Restriccion[]) {
   return {
-    criticasAbiertas:   restricciones.filter(r => r.tipo === 'critica'    && r.estado !== 'cerrada').length,
-    noCriticasAbiertas: restricciones.filter(r => r.tipo !== 'critica'    && r.estado !== 'cerrada').length,
-    cerradas:           restricciones.filter(r => r.estado === 'cerrada').length,
+    criticasAbiertas:   restricciones.filter(r => r.tipo === 'CRITICA'    && r.estado !== 'CERRADA').length,
+    noCriticasAbiertas: restricciones.filter(r => r.tipo !== 'CRITICA'    && r.estado !== 'CERRADA').length,
+    cerradas:           restricciones.filter(r => r.estado === 'CERRADA').length,
     total:              restricciones.length,
   };
 }
@@ -27,8 +27,8 @@ export function estadoMeta(estado: Restriccion['estado']): {
   variant: 'ok' | 'warn' | 'danger';
 } {
   switch (estado) {
-    case 'cerrada':    return { label: 'Cerrada',    variant: 'ok'     };
-    case 'en-proceso': return { label: 'En Proceso', variant: 'warn'   };
+    case 'CERRADA':    return { label: 'Cerrada',    variant: 'ok'     };
+    case 'EN_PROCESO': return { label: 'En Proceso', variant: 'warn'   };
     default:           return { label: 'Abierta',    variant: 'danger' };
   }
 }
