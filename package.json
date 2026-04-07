@@ -1,0 +1,13 @@
+{
+  "name": "motil-dashboard",
+  "version": "1.0.0",
+  "description": "CMEJIA MOTIL - Dashboard de Control de Obra",
+  "scripts": {
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "seed": "cd backend && npm run seed",
+    "dev:backend": "cd backend && npm start",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "cd backend && NODE_ENV=production npm start"
+  }
+}
