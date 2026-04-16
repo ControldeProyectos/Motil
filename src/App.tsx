@@ -1,52 +1,43 @@
 import { useState } from 'react';
-import type { TabId } from './types';
-import { useAuth } from './contexts/AuthContext';
-import { useProyectoActivo } from './hooks/useProyecto';
-import { useSuministros } from './hooks/useSuministros';
-import { useRestricciones } from './hooks/useRestricciones';
-import { getAlertas } from './utils/alerts';
+import type { TabId, Suministro, Restriccion, EstadoRestriccion } from './types';
 import { Header } from './components/Header';
 import { NavTabs } from './components/NavTabs';
 import { ResumenEjecutivo } from './components/sections/ResumenEjecutivo';
 import { AvanceObra } from './components/sections/AvanceObra';
 import { CurvaS } from './components/sections/CurvaS';
-import { Suministros } from './components/sections/Suministros';
-import { Restricciones } from './components/sections/Restricciones';
+import { SuministrosDemo } from './components/sections/SuministrosDemo';
+import { RestriccionesDemo } from './components/sections/RestriccionesDemo';
 import { Configuracion } from './components/sections/Configuracion';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import LoginPage from './pages/LoginPage';
+import { SUMINISTROS_DEMO } from './data/suministrosDemo';
+import { RESTRICCIONES_DEMO } from './data/restriccionesDemo';
+import { getAlertas } from './utils/alerts';
 
 const DEFAULT_DIAS_ALERTA = 15;
 
 export default function App() {
-  const { isAuthenticated, isLoading: authLoading, logout } = useAuth();
-  const [activeTab, setActiveTab]     = useState<TabId>('resumen');
-  const [diasAlerta, setDiasAlerta]   = useState(DEFAULT_DIAS_ALERTA);
+  const [activeTab, setActiveTab]       = useState<TabId>('resumen');
+  const [diasAlerta, setDiasAlerta]     = useState(DEFAULT_DIAS_ALERTA);
+  const [suministros, setSuministros]   = useState<Suministro[]>(SUMINISTROS_DEMO);
+  const [restricciones, setRestricciones] = useState<Restriccion[]>(RESTRICCIONES_DEMO);
 
-  const { proyectoId } = useProyectoActivo();
-  const { data: suministros = [] } = useSuministros(proyectoId);
-  const { data: restricciones = [] } = useRestricciones(proyectoId);
   const alerts = getAlertas(suministros, diasAlerta);
+
+  const handleAddSuministro    = (s: Suministro) => setSuministros(p => [...p, s]);
+  const handleDeleteSuministro = (id: string) => setSuministros(p => p.filter(s => s.id !== id));
+
+  const handleAddRestriccion    = (r: Restriccion) => setRestricciones(p => [...p, r]);
+  const handleDeleteRestriccion = (id: string) => setRestricciones(p => p.filter(r => r.id !== id));
+  const handleUpdateEstado      = (id: string, estado: EstadoRestriccion) =>
+    setRestricciones(p => p.map(r => r.id === id ? { ...r, estado } : r));
 
   const today = new Date().toLocaleDateString('es-PE', {
     day: '2-digit', month: 'long', year: 'numeric',
   });
 
-  if (authLoading) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f4f8' }}>
-        <div style={{ color: '#4a6080', fontSize: 14 }}>Cargando…</div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <LoginPage />;
-  }
-
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Header onLogout={logout} />
+      <Header />
       <NavTabs active={activeTab} onChange={setActiveTab} alertCount={alerts.length} />
 
       <main style={{ padding: '22px 28px', maxWidth: 1600, flex: 1 }}>
@@ -69,11 +60,22 @@ export default function App() {
             <CurvaS />
           </ErrorBoundary>
         )}
-        {activeTab === 'suministros' && proyectoId && (
-          <Suministros proyectoId={proyectoId} diasAlerta={diasAlerta} />
+        {activeTab === 'suministros' && (
+          <SuministrosDemo
+            suministros={suministros}
+            alerts={alerts}
+            diasAlerta={diasAlerta}
+            onAdd={handleAddSuministro}
+            onDelete={handleDeleteSuministro}
+          />
         )}
-        {activeTab === 'restricciones' && proyectoId && (
-          <Restricciones proyectoId={proyectoId} />
+        {activeTab === 'restricciones' && (
+          <RestriccionesDemo
+            restricciones={restricciones}
+            onAdd={handleAddRestriccion}
+            onDelete={handleDeleteRestriccion}
+            onUpdateEstado={handleUpdateEstado}
+          />
         )}
         {activeTab === 'configuracion' && (
           <Configuracion
